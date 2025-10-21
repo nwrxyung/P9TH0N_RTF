@@ -1,0 +1,83 @@
+// api-mining
+
+import requests
+import csv
+from datetime import datetime, timedelta
+from xml.etree import ElementTree as ET
+
+
+API_URL = "http://127.0.0.1:8000/scripts/XML_daily.asp"
+
+START_DATE = datetime(2003, 1, 1)
+END_DATE = datetime(2024, 11, 1)
+
+OUTPUT_FILE = "student_works/currency.csv"
+
+CURRENCY_FIELDS = ["BYR", "USD", "EUR", "KZT", "UAH", "AZN", "KGS", "UZS", "GEL"]
+
+with open(OUTPUT_FILE, mode="w", newline="", encoding="utf-8") as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(["date"] + CURRENCY_FIELDS)
+
+    current_date = START_DATE
+    while current_date <= END_DATE:
+        params = {"date_req": current_date.strftime("%d/%m/%Y")}
+        response = requests.get(API_URL, params=params)
+
+        if response.status_code == 200:
+            xml_data = response.content
+            root = ET.fromstring(xml_data)
+            currencies = {}
+
+            for valute in root.findall(".//Valute"):
+                char_code = valute.find("CharCode").text
+                if char_code in CURRENCY_FIELDS:
+                    value = valute.find("VunitRate").text.replace(',', '.')
+                    currencies[char_code] = round(float(value), 8)
+
+            row = [current_date.strftime("%Y-%m")]
+            row.extend(currencies.get(field, None) for field in CURRENCY_FIELDS)
+
+            writer.writerow(row)
+
+        current_date += timedelta(days=31)
+        current_date = current_date.replace(day=1)
+
+
+// Converter
+
+
+import math
+import pandas as pd
+import sqlite3
+
+
+df_currency = pd.read_csv('valutes.csv', index_col='date')
+csv_merged = pd.read_csv('vacancies_dif_currencies.csv')
+
+csv_merged['id'] = range(1, len(csv_merged) + 1)
+
+csv_merged['average_salary'] = csv_merged[['salary_from', 'salary_to']].mean(axis=1)
+
+
+def convert_to_rub(row):
+    if pd.isnull(row['average_salary']):
+        return None
+    if row['salary_currency'] == 'RUR' or pd.isnull(row['salary_currency']):
+        return row['average_salary']
+    date_key = row['published_at'][:7]
+    if date_key in df_currency.index:
+        exchange_rate = df_currency.at[date_key, row['salary_currency']]
+        if not math.isnan(exchange_rate):
+            return row['average_salary'] * exchange_rate
+    return None
+
+csv_merged['salary'] = csv_merged.apply(convert_to_rub, axis=1)
+
+filtered_vacancies = csv_merged[['id', 'name', 'salary', 'area_name', 'published_at']]
+
+conn = sqlite3.connect('student_works/vacancies.db')
+
+filtered_vacancies.to_sql('vacancies', conn, if_exists='replace', index=False)
+
+conn.close()
