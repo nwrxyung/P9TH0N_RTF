@@ -1,0 +1,62 @@
+// Поиск и сортировка
+
+import pandas as pd
+
+vacancies = pd.read_csv('vacancies_small.csv')
+
+column = input()
+key = input()
+sort_by = input()
+sort_order = input()
+
+filtered_vacancies = vacancies[vacancies[column].str.contains(key, case=False, na=False)]
+
+if sort_order == 'asc':
+    sorted_vacancies = filtered_vacancies.sort_values(by=sort_by, ascending=True, kind='mergesort')
+else:
+    sorted_vacancies = filtered_vacancies.sort_values(by=sort_by, ascending=False, kind='mergesort')
+
+result = sorted_vacancies['name'].tolist()
+
+print(result)
+
+
+// counter
+
+import pandas as pd
+from collections import Counter
+
+vacancies = pd.read_csv('vacancies_small.csv')
+
+name = input()
+sort = input() == 'asc'
+
+filtered_vac = vacancies[vacancies['name'].str.contains(name, case=False, na=False)]
+skills = filtered_vac['key_skills'].str.split('\n').explode().dropna()
+skills_cnt = Counter(skills).most_common(5)
+result = sorted(skills_cnt, key=lambda x: x[1], reverse= not sort)
+print(result)
+
+
+// GroupBy 
+
+import pandas as pd
+
+vacancies = pd.read_csv('vacancies_small.csv')
+
+rur_vacancies = vacancies[vacancies['salary_currency'] == 'RUR']
+rur_vacancies = rur_vacancies.fillna({'salary_to': 0, 'salary_from': 0})
+
+
+def calculate_avg_salary(row):
+    if row['salary_from'] == 0:
+        return row['salary_to']
+    elif row['salary_to'] == 0:
+        return row['salary_from']
+    else:
+        return (row['salary_from'] + row['salary_to']) / 2
+
+rur_vacancies['avg_salary'] = rur_vacancies.apply(calculate_avg_salary, axis=1)
+city_avg_salary = rur_vacancies.groupby('area_name')['avg_salary'].mean().round().astype(int)
+result = city_avg_salary.sort_values(ascending=False, kind="mergesort").to_dict()
+print(result)
