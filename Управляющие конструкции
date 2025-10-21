@@ -1,0 +1,63 @@
+// Большая коллекция
+
+import csv
+
+file_name = input()
+
+with open(file_name, encoding='utf-8-sig') as csvfile:
+    csvreader = csv.reader(csvfile)
+    title_row = next(csvreader) 
+    rows_list = []
+    total_headers = len(title_row)
+
+    for row in csvreader:
+        filled_fields = sum(1 for field in row if field)  # Подсчитываем количество непустых полей
+        if filled_fields >= (total_headers / 2):
+            rows_list.append(row)
+
+print(title_row)
+print(rows_list) 
+
+
+// Больше словарей
+
+import csv
+import re
+
+pattern_to_clean = re.compile('<.*?>')
+
+def clean_text(text):
+    if text:
+        cleaned = re.sub(pattern_to_clean, '', text).strip()
+        cleaned_lines = [line.strip() for line in cleaned.split('\n')]
+        return "; ".join(line for line in cleaned_lines if line)
+    return "Нет данных"
+
+def process_row(row, title_row):
+    some_dict = {}
+    cleaned_values = [clean_text(value) for value in row]
+
+    for title, value in zip(title_row, cleaned_values):
+        some_dict[title] = ' '.join(value.split()) if value else "Нет данных"
+
+    return some_dict
+
+def print_rows(rows_list):
+    for index, dictionary in enumerate(rows_list):
+        for key, value in dictionary.items():
+            print(f'{key}: {value.strip()}')
+        if index != len(rows_list) - 1:
+            print('')
+
+file_path = input()
+with open(file_path, encoding='utf-8-sig') as csvfile:
+    csvreader = csv.reader(csvfile)
+    title_row = next(csvreader)
+    rows_list = []
+
+    for row in csvreader:
+        if sum(1 for field in row if field) >= (len(title_row) / 2):
+            processed_row = process_row(row, title_row)
+            rows_list.append(processed_row)
+
+print_rows(rows_list)
