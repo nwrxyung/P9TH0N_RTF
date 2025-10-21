@@ -1,0 +1,170 @@
+// Обрезка таблицы
+
+import csv
+from prettytable import PrettyTable, ALL
+
+def truncate_text(text, max_length=100):
+    return text[:max_length] + "..." if len(text) > max_length else text
+
+def setup_table(titles, visible_fields):
+    table = PrettyTable()
+    table.field_names = ['№'] + titles
+    table.align = "l"
+    table.max_width = 20
+    table.hrules = True
+    return table
+
+def add_rows_to_table(table, dreader, titles):
+    for index, row in enumerate(dreader):
+        table.add_row([index + 1] + [truncate_text(row[title].strip()) for title in titles])
+
+def print_vacancies(dreader, titles, visible_fields, start, end):
+    if not dreader:
+        print("Нет данных")
+        return
+
+    table = setup_table(titles, visible_fields)
+
+    add_rows_to_table(table, dreader, titles)
+
+    visible_fields_with_index = ['№'] + visible_fields if visible_fields else titles
+    print(table.get_string(start=start, end=end, fields=visible_fields_with_index))
+
+def csv_reader(file_name):
+    with open(file_name, encoding='utf-8') as file:
+        reader = csv.DictReader(file)
+        headers = reader.fieldnames
+        reader = list(reader)
+    return reader, headers
+
+def parse_ranges(ranges, dreader_length):
+    if not ranges.strip():
+        return 0, dreader_length
+       
+    range_values = list(map(int, ranges.split()))
+    start_range = range_values[0] - 1
+
+    if len(range_values) > 1:
+        end_range = range_values[1]
+        return start_range, end_range
+    else:
+        return start_range, dreader_length
+
+def main():
+    filename = input()
+    ranges = input()
+    fields = input().split(", ")
+
+    dreader, titles = csv_reader(filename)
+
+    start_range, end_range = parse_ranges(ranges, len(dreader))
+    
+    if not fields or fields == [""]:
+        fields = titles
+
+    print_vacancies(dreader, titles, fields, start_range, end_range)
+
+if __name__ == '__main__':
+    main()
+
+
+// Фильтрация таблицы
+
+import csv
+import math
+import re
+
+
+from prettytable import PrettyTable
+
+def csv_reader(file_name):
+    file = open(file_name, mode='r', encoding='utf-8-sig')
+    reader = csv.reader(file)
+    return reader, file
+
+def truncate_text(text, max_length):
+    return text if len(text) <= max_length else text[:max_length] + '...'
+
+def parse_salary(salary_string):
+    pattern = r"(\d{1,3}(?:\s\d{3})*)\s*-\s*(\d{1,3}(?:\s\d{3})*)\s(\(.*?\))"
+    match = re.search(pattern, salary_string)
+    return [match.group(1), match.group(2), match.group(3)[1:-1]] if match else None
+
+def convert_csv_to_dicts(reader, file):
+    titles = next(reader)
+    vacancies = [
+        {
+            titles[i]: row[i].split('\n') if '\n' in row[i] else row[i]
+            for i in range(len(titles))
+        }
+        for row in reader if sum(1 for field in row if field) >= math.ceil(len(titles) / 2)
+    ]
+    file.close()
+    return titles, vacancies
+
+def enforce_input_structure(func):
+    def wrapper(vacancies, titles, vac_lines, fields, filter_param):
+        vac_lines = vac_lines.strip().split(' ')
+        start = int(vac_lines[0]) if vac_lines and vac_lines[0].isdigit() else 1
+        end = int(vac_lines[1]) if len(vac_lines) > 1 else len(vacancies)
+        fields_list = fields.split(', ') if fields.strip() else titles
+        return func(vacancies, titles, fields_list, start, end, filter_param)
+    return wrapper
+
+def create_pretty_table(func):
+    def wrapper(titles, vacancies, start, end, fields):
+        table = PrettyTable()
+        table.field_names = ['№'] + titles
+        table.hrules = True
+        table.max_width = 20
+        table.align = 'l'
+        return func(table, titles, vacancies, start, end, fields)
+    return wrapper
+
+def parse_filter(func):
+    def wrapper(vacancies, filter_param):
+        if not filter_param:
+            return vacancies
+        field, value = filter_param.split(': ', 1)
+        return func(vacancies, field, value)
+    return wrapper
+
+@parse_filter
+def filter_vacancies(vacancies, field, value):
+    if field == 'Оклад':
+        salary = int(value)
+        return [
+            vac for vac in vacancies 
+            if int(''.join(parse_salary(vac['Оклад'])[0].split(' '))) <= salary <= int(''.join(parse_salary(vac['Оклад'])[1].split(' ')))
+        ]
+    elif field == 'Идентификатор валюты оклада':
+        return [vac for vac in vacancies if parse_salary(vac.get('Оклад', ''))[2] == value]
+    else:
+        return [vac for vac in vacancies if value in vac.get(field, '')]
+
+@create_pretty_table
+def render_table(table, titles, vacancies, start, end, fields):
+    for index, vacancy in enumerate(vacancies, start=1):
+        table.add_row([index] + [truncate_text(str(vacancy[title]), 100) for title in titles])
+    print(table.get_string(fields=['№'] + fields, start=start - 1, end=end))
+
+@enforce_input_structure
+def print_vacancies(vacancies, titles, fields, start, end, filter_param):
+    filtered_vacancies = filter_vacancies(vacancies, filter_param)
+    render_table(titles, filtered_vacancies, start, end, fields)
+
+def main():
+    file_name = input()
+    reader, file = csv_reader(file_name)
+    titles, vacancies = convert_csv_to_dicts(reader, file)
+    
+    filter_param = input()
+    vac_lines = input()
+    selected_titles = input()
+    
+    print_vacancies(vacancies, titles, vac_lines, selected_titles, filter_param)
+
+if __name__ == '__main__':
+    main()
+
+
