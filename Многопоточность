@@ -1,0 +1,71 @@
+// multiprocessing
+
+import multiprocessing
+
+
+def main():
+    array_2d = input()
+
+    rows = array_2d.strip()[1:-1].strip().split('], [')
+    
+    clean_rows = [r.strip('[]') for r in rows]
+    
+    array_2d = [list(map(int, row.split())) for row in clean_rows]
+    
+    with multiprocessing.Pool() as pool:
+        results = pool.map(worker_function, array_2d)
+    
+    result = sum(results)
+    print(result)
+
+if __name__ == "__main__":
+    main()
+
+// Threading
+
+mport threading
+import requests
+from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor
+
+
+def get_currencies(url, id, currencies, lock):
+    response = requests.get(url)
+    if response.status_code == 200:
+        secret_code()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        valutes = soup.find_all('valute')
+        if id < len(valutes):
+            currency = str(valutes[id])
+            with lock:
+                if currency not in currencies:
+                    currencies.append(currency)
+
+
+if __name__ == '__main__':
+    currencies = []
+    id = int(input())
+    lock = threading.Lock()
+
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        for url in urls:
+            future = pool.submit(get_currencies, url, id, currencies, lock)
+            future.result()
+
+    currencies_string = ''.join(currencies)
+    print(currencies_string)
+
+
+
+// asyncio
+
+import asyncio
+
+
+async def main(filenames):
+    names = []
+    for filename in filenames:
+        curr_names = await read_file_async(filename)
+        names.append(curr_names)
+    names_str = ' '.join(name for name in names)
+    return names_str
