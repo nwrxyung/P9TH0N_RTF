@@ -1,0 +1,165 @@
+// Вакансии в ООП
+
+from var_dump import var_dump
+import csv
+
+
+class Vacancy:
+    def __init__(self, name, description, key_skills, experience_id, premium,
+                 employer_name, salary, area_name, published_at):
+        self.name = name
+        self.description = description
+        self.key_skills = key_skills
+        self.experience_id = experience_id
+        self.premium = premium
+        self.employer_name = employer_name
+        self.salary = salary
+        self.area_name = area_name
+        self.published_at = published_at
+
+
+class Salary:
+    def __init__(self, salary_from, salary_to, salary_gross, salary_currency):
+        self.salary_from = salary_from
+        self.salary_to = salary_to
+        self.salary_gross = salary_gross
+        self.salary_currency = salary_currency
+
+
+def main():
+    filename = input()
+
+    vacancies = []
+
+    with open(filename, mode='r', encoding='utf-8-sig') as file:
+        csv_reader = csv.DictReader(file)
+
+        for row in csv_reader:
+            salary = Salary(
+                salary_from = row['salary_from'],
+                salary_to = row['salary_to'],
+                salary_gross = row['salary_gross'],
+                salary_currency = row['salary_currency']
+            )
+
+            vacancy = Vacancy(
+                name = row['name'],
+                description = row['description'],
+                key_skills = row['key_skills'],
+                experience_id = row['experience_id'],
+                premium = row['premium'],
+                employer_name = row['employer_name'],
+                salary = salary,
+                area_name = row['area_name'],
+                published_at = row['published_at']
+            )
+
+            vacancies.append(vacancy)
+
+    var_dump(vacancies)
+
+
+if __name__ == '__main__':
+    main()
+
+
+// Функции в ООП
+
+import math
+from prettytable import PrettyTable
+from csv import reader as csv_reader
+
+class Vacancy:
+    def __init__(self, name, description, key_skills, experience_id, premium,
+                 employer_name, salary, area_name, published_at):
+        self.name = name
+        self.description = description
+        self.key_skills = key_skills
+        self.experience_id = experience_id
+        self.premium = premium
+        self.employer_name = employer_name
+        self.salary = salary
+        self.area_name = area_name
+        self.published_at = published_at
+
+class Salary:
+    def __init__(self, salary_from, salary_to, salary_gross, salary_currency):
+        self.salary_from = salary_from
+        self.salary_to = salary_to
+        self.salary_gross = salary_gross
+        self.salary_currency = salary_currency
+
+class DataSet:
+    def __init__(self, filename):
+        data = self.__csv_reader(filename)
+        self.titles = data[0]
+        self.vacancies = [self.__create_vacancy(vacancy_data) for vacancy_data in data[1]]
+
+    @staticmethod
+    def __csv_reader(filename):
+        with open(filename, mode='r', encoding='utf-8-sig') as file:
+            reader = csv_reader(file)
+            titles = next(reader)
+            vacancies = [{
+                titles[i]: row[i] if '\n' not in row[i] else row[i].split('\n')
+                for i in range(len(titles))
+            } for row in reader if sum(1 for field in row if field) >= math.ceil(len(titles) / 2)]
+        return titles, vacancies
+
+    @staticmethod
+    def __do_objects_list(reader):
+        titles = next(reader)
+        vacancies = [{
+            titles[i]: row[i] if '\n' not in row[i] else row[i].split('\n') for i in range(len(titles))
+        } for row in reader if sum(1 for field in row if field) >= math.ceil(len(titles) / 2)]
+        return titles, vacancies
+
+    def __create_vacancy(self, vac_dict):
+        salary = Salary(
+            salary_from=vac_dict.get('salary_from', 'Нет данных'),
+            salary_to=vac_dict.get('salary_to', 'Нет данных'),
+            salary_gross=vac_dict.get('salary_gross', 'Нет данных'),
+            salary_currency=vac_dict.get('salary_currency', 'Нет данных')
+        )
+        return Vacancy(
+            name=vac_dict.get('name', 'Нет данных'),
+            description=vac_dict.get('description', 'Нет данных'),
+            key_skills=vac_dict.get('key_skills', 'Нет данных'),
+            experience_id=vac_dict.get('experience_id', 'Нет данных'),
+            premium=vac_dict.get('premium', 'Нет данных'),
+            employer_name=vac_dict.get('employer_name', 'Нет данных'),
+            salary=salary,
+            area_name=vac_dict.get('area_name', 'Нет данных'),
+            published_at=vac_dict.get('published_at', 'Нет данных')
+        )
+
+class Utils:
+    @staticmethod
+    def truncate_text(text, max_length):
+        return text if len(text) <= max_length else text[:max_length] + '...'
+
+    @staticmethod
+    def create_table(dataset):
+        table = PrettyTable()
+        table.field_names = ['№'] + dataset.titles
+        table.hrules = True
+        table.max_width = 20
+        table.align = 'l'
+        for index, vacancy in enumerate(dataset.vacancies):
+            row = [
+                getattr(vacancy.salary if field.startswith('salary_') else vacancy, field, "Нет данных")
+                for field in dataset.titles
+            ]
+            truncate_row = [Utils.truncate_text(str(cell), 100) for cell in row]
+            table.add_row([index + 1] + truncate_row)
+        return table
+
+def main():
+    filename = input()
+    dataset = DataSet(filename)
+    table = Utils.create_table(dataset)
+    print(table)
+
+if __name__ == '__main__':
+    main()
+
