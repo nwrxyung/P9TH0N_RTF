@@ -1,0 +1,83 @@
+// Socket
+
+import socket
+import pandas as pd
+
+def start_server():
+    df = pd.read_csv('organizations.csv')
+    host = "127.0.0.32"
+    port = 12345
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((host, port))
+    server.listen(1)
+
+    client, addr = server.accept()
+
+    while True:
+        data = client.recv(1024).decode()
+        if not data:
+            break
+
+        if data == "exit":
+            break
+
+        organization = df.loc[df['Name'] == data].iloc[0]
+        message = f"Сайт: {organization['Website']}. Страна: {organization['Country']}"
+
+        client.send(message.encode())
+
+    client.close()
+    server.close()
+
+if __name__ == "__main__":
+    start_server()
+
+
+// json socket
+
+
+import socket
+import json
+import pandas as pd
+import threading
+
+
+def start_server():
+    df = pd.read_csv("organizations.csv")
+    host = "127.0.0.32"
+    port = 12345
+    
+    server = socket.socket()
+    server.bind((host, port))
+    server.listen(5)
+
+    client, _ = server.accept()
+    thread = threading.Thread(target=server_handle, args=(client, df))
+    thread.start()
+
+
+def server_handle(client, df):
+    global result
+    while True:
+        try:
+            message = client.recv(1024).decode()
+            request = json.loads(message)
+            operation = request.get('operation')
+            name = request.get('name')
+            
+            org = df[df['Name'].str.contains(name, case=False, na=False)]
+            org_info = org.iloc[0]
+            
+            if operation == 'get_website':
+                result = org_info['Website']
+            elif operation == 'get_country':
+                result = org_info['Country']
+            elif operation == 'get_number_of_employees':
+                result = int(org_info['Number of employees'])
+            elif operation == 'get_description':
+                result = org_info['Description']
+            client.send(json.dumps({"result": result}).encode())
+        except Exception as e:
+            client.send(json.dumps({"error": str(e)}).encode())
+            break
