@@ -1,0 +1,39 @@
+// urls
+
+from django.contrib import admin
+from django.urls import path
+from .views import hello, all_vacancies, get_salary_year_dynamic, get_count_year_dynamic, get_top_10_salary_city, get_top_10_vac_city, filter_vacancies
+
+
+urlpatterns = [
+    path('hello/', hello),
+ path('vacancies/', all_vacancies),
+    path('vacancies/filter/', filter_vacancies),
+    path('vacancies/dynamic/salary-year/', get_salary_year_dynamic),
+    path('vacancies/dynamic/count-year/', get_count_year_dynamic),
+    path('vacancies/statistic/top10-salary-city/', get_top_10_salary_city),
+    path('vacancies/statistic/top10-vac-city/', get_top_10_vac_city)
+]
+
+
+// models
+
+from django.db import models
+
+
+class SiteUser(models.Model):
+    first_name = models.CharField("Имя", max_length=255)
+    last_name = models.CharField("Фамилия", max_length=255)
+    def get_name(self):
+        return f'{self.first_name} {self.last_name}'
+    class Meta:
+        db_table = "site_users"
+
+
+class Vacancy(models.Model):
+    name = models.TextField("Имя")
+    salary = models.FloatField("Зарплата")
+    area_name = models.TextField("Город")
+    published_at = models.TextField("Время публикации")
+    class Meta:
+        db_table = "vacancies"
