@@ -1,0 +1,82 @@
+// Единый формат
+
+import json
+import re
+
+def process_description(value):
+    return ". ".join(sentence.capitalize() for sentence in value.lower().split('. '))
+
+def process_salary(value):
+    return f'{float(value):.2f}'
+
+def process_key_phrase(value):
+    return f'{value.upper()}!'
+
+def process_addition(value):
+    return f'..{value.lower()}..'
+
+def process_company_info(value):
+    while re.search(r'\([^()]*\)', value):
+        value = re.sub(r'\([^()]*\)', '', value)
+    return value
+
+def process_key_skills(value):
+    return value.replace("&nbsp", " ")
+
+text = input()
+headings = input()
+result = {}
+
+process_functions = {
+    "description": process_description,
+    "salary": process_salary,
+    "key_phrase": process_key_phrase,
+    "addition": process_addition,
+    "company_info": process_company_info,
+    "key_skills": process_key_skills
+}
+
+for item in text.split(';'):
+    if item.strip():
+        key, value = item.strip().split(': ', 1)
+        if key in headings.split(', '):
+            if key in process_functions:
+                result[key] = process_functions[key](value)
+
+print(json.dumps(result))
+
+
+// Меняем csv
+
+import re
+import csv
+
+file = input()
+new_file = input()
+highlight = input()
+
+def format_string(string, highlight):
+    string = re.sub(r'<.*?>', '', string)
+
+    string = re.sub(r'\b(\d{2})\.(\d{2})\b(?!%)', r'\1:\2', string)
+
+    string = re.sub(r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\+\d{4}', 
+                     r'\4:\5:\6 \3/\2/\1', string)
+
+    for item in highlight.split(','):
+        item = item.strip()
+        string = re.sub(fr'\b(\w*{re.escape(item)}\w*)\b', lambda match: match.group(0).upper(), 
+                        string, flags=re.IGNORECASE)
+    
+    return string
+
+with open(new_file, 'w', encoding='utf-8', newline='') as outfile:
+    writer = csv.writer(outfile)
+
+    with open(file, 'r', encoding='utf-8-sig') as infile:
+        reader = csv.reader(infile)
+
+        for row in reader:
+            for i in range(len(row)):
+                row[i] = format_string(row[i], highlight)
+            writer.writerow(row)
