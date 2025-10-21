@@ -1,0 +1,164 @@
+// Функциональное поле экспериментов
+
+import csv
+import re
+import math
+
+rus_translation = {
+    'name': 'Название',
+    'description': 'Описание',
+    'key_skills': 'Навыки',
+    'experience_id': 'Опыт работы',
+    'premium': 'Премиум-вакансия',
+    'employer_name': 'Компания',
+    'salary_from': 'Нижняя граница вилки оклада',
+    'salary_to': 'Верхняя граница вилки оклада',
+    'salary_gross': 'Оклад указан до вычета налогов',
+    'salary_currency': 'Идентификатор валюты оклада',
+    'area_name': 'Название региона',
+    'published_at': 'Дата и время публикации вакансии',
+}
+
+def clean_html_tags(text):
+    return re.sub(r'<[^>]*>', '', text).strip()
+
+def csv_reader(file_name):
+    with open(file_name, mode='r', encoding='utf-8-sig') as f:
+        reader = csv.reader(f)
+        titles = next(reader)
+        data = [row for row in reader]
+    return titles, data
+
+def process_data(titles, data):
+    vacancies = []
+    for row in data:
+        if len([x for x in row if x]) >= math.ceil(len(titles) / 2):
+            vacancy = {titles[i]: clean_html_tags(row[i]) for i in range(len(titles))}
+            vacancies.append(vacancy)
+    return vacancies
+
+def print_vacancies(vacancies, titles):
+    for index, vac in enumerate(vacancies):
+        for key, val in vac.items():
+            if val == 'True' or val == 'False':
+                val = 'Да' if val == 'True' else 'Нет'
+            if '\n' in val:
+                val = ", ".join(val.split('\n'))
+            print(f"{rus_translation.get(key, key)}: {val if val else 'Нет данных'}")
+        if index != len(vacancies) - 1:
+            print('')
+
+def main():
+    file_name = input().strip()
+    titles, data = csv_reader(file_name)
+    vacancies = process_data(titles, data)
+    print_vacancies(vacancies, titles)
+
+if __name__ == '__main__':
+    main()
+
+
+
+// Печать по-русски
+
+import csv
+import math
+import re
+
+field_translations = {
+    'name': 'Название',
+    'description': 'Описание',
+    'key_skills': 'Навыки',
+    'experience_id': 'Опыт работы',
+    'premium': 'Премиум-вакансия',
+    'employer_name': 'Компания',
+    'salary_from': 'Нижняя граница вилки оклада',
+    'salary_to': 'Верхняя граница вилки оклада',
+    'salary_gross': 'Оклад указан до вычета налогов',
+    'salary_currency': 'Идентификатор валюты оклада',
+    'area_name': 'Название региона',
+    'published_at': 'Дата публикации вакансии',
+}
+
+experience_translation = {
+    "noExperience": "Нет опыта",
+    "between1And3": "От 1 года до 3 лет",
+    "between3And6": "От 3 до 6 лет",
+    "moreThan6": "Более 6 лет"
+}
+
+currency_translation = {
+    "AZN": "Манаты",
+    "BYR": "Белорусские рубли",
+    "EUR": "Евро",
+    "GEL": "Грузинский лари",
+    "KGS": "Киргизский сом",
+    "KZT": "Тенге",
+    "RUR": "Рубли",
+    "UAH": "Гривны",
+    "USD": "Доллары",
+    "UZS": "Узбекский сум"
+}
+
+def clean_text(text):
+    return re.sub(r'<.*?>', '', text).strip()
+
+def csv_reader(file_name):
+    with open(file_name, mode='r', encoding='utf-8-sig') as file:
+        reader = csv.reader(file)
+        titles = next(reader)
+        data = [row for row in reader]
+    return titles, data
+
+def process_data(titles, data):
+    vacancies = []
+    for row in data:
+        if sum(1 for field in row if field) >= math.ceil(len(titles) / 2):
+            vacancy = {titles[i]: clean_text(row[i]) for i in range(len(titles))}
+            vacancies.append(vacancy)
+    return vacancies
+
+def format_salary(data):
+    salary_from = int(float(data.get('salary_from', 0)))
+    salary_to = int(float(data.get('salary_to', 0)))
+    salary_currency = currency_translation.get(data.get('salary_currency', ''), "Неизвестная валюта")
+    salary_gross = 'Без вычета налогов' if data.get('salary_gross') == 'True' else 'С вычетом налогов'
+    return f"{salary_from:,}".replace(',', ' ') + f" - {salary_to:,}".replace(',', ' ') + f" ({salary_currency}) ({salary_gross})"
+
+def formatter(row):
+    formatted_row = {}
+    for key, value in row.items():
+        if key in ['salary_from', 'salary_to', 'salary_currency', 'salary_gross']:
+            continue
+        translated_key = field_translations.get(key, key)
+        if value in ['True', 'False']:
+            value = 'Да' if value == "True" else "Нет"
+        elif isinstance(value, str) and '\n' in value:
+            value = ", ".join(value.splitlines())
+        elif value in experience_translation:
+            value = experience_translation[value]
+        elif not value:
+            value = "Нет данных"
+        if key == 'area_name':
+            formatted_row['Оклад'] = format_salary(row)
+        formatted_row[translated_key] = value
+
+    return formatted_row
+
+def print_vacancies(vacancies):
+    last_index = len(vacancies) - 1
+    for index, vacancy in enumerate(vacancies):
+        formatted_vacancy = formatter(vacancy)
+        for key, value in formatted_vacancy.items():
+            print(f'{key}: {value}')
+        if index != last_index:
+            print('')
+
+def main():
+    file_name = input().strip()
+    titles, data = csv_reader(file_name)
+    vacancies = process_data(titles, data)
+    print_vacancies(vacancies)
+
+if __name__ == '__main__':
+    main()
